@@ -31,9 +31,21 @@ This codebase builds on [stable-worldmodel](https://github.com/galilai-group/sta
 
 **Installation:**
 ```bash
+# install the stable-worldmodel environment
+git clone https://github.com/galilai-group/stable-worldmodel.git
+cd ./stable-worldmodel
 uv venv --python=3.10
 source .venv/bin/activate
-uv pip install stable-worldmodel[train,env]
+uv sync --all-extras --group dev
+
+cd ../
+git clone https://github.com/lucas-maes/le-wm.git
+cd /le-wm
+source ../stable-worldmodel/.venv/bin/activate
+
+# If the torch version does not match, replace with the correct version via:
+uv pip uninstall torch torchvision torchaudio
+uv pip install --python ../stable-worldmodel/.venv/bin/python --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cuxxx
 ```
 
 ## Data
