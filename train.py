@@ -51,8 +51,13 @@ def run(cfg):
     ##       dataset       ##
     #########################
 
+
+    #dataset
     dataset = swm.data.HDF5Dataset(**cfg.data.dataset, transform=None)
+    
+    #transforms the datasets
     transforms = [get_img_preprocessor(source='pixels', target='pixels', img_size=cfg.img_size)]
+    
     
     with open_dict(cfg):
         for col in cfg.data.dataset.keys_to_load:
@@ -84,8 +89,7 @@ def run(cfg):
         patch_size=cfg.patch_size,
         image_size=cfg.img_size,
         pretrained=False,
-        use_mask_token=False,
-    )
+        use_mask_token=False,)
 
     hidden_dim = encoder.config.hidden_size
     embed_dim = cfg.wm.get("embed_dim", hidden_dim)
