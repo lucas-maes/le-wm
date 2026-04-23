@@ -86,7 +86,10 @@ def run(cfg: DictConfig):
 
     if policy != "random":
         model = swm.policy.AutoCostModel(cfg.policy)
-        model = model.to("cuda")
+        # Honour cfg.device when set; fall back to CUDA for backward
+        # compatibility with existing configs that don't specify one.
+        device = cfg.get("device", "cuda")
+        model = model.to(device)
         model = model.eval()
         model.requires_grad_(False)
         model.interpolate_pos_encoding = True

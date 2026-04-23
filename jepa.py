@@ -131,9 +131,16 @@ class JEPA(nn.Module):
         assert "goal" in info_dict, "goal not in info_dict"
 
         device = next(self.parameters()).device
+        # Apple's MPS backend does not support float64; downcast any
+        # incoming double tensors (e.g. pusht's float64 proprio/state
+        # observations) before moving them to the device.
+        is_mps = getattr(device, "type", str(device)).startswith("mps")
         for k in list(info_dict.keys()):
-            if torch.is_tensor(info_dict[k]):
-                info_dict[k] = info_dict[k].to(device)
+            t = info_dict[k]
+            if torch.is_tensor(t):
+                if is_mps and t.dtype == torch.float64:
+                    t = t.to(dtype=torch.float32)
+                info_dict[k] = t.to(device)
 
         goal = {k: v[:, 0] for k, v in info_dict.items() if torch.is_tensor(v)}
         goal["pixels"] = goal["goal"]
