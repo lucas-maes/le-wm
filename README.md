@@ -26,6 +26,41 @@ If you find this code useful, please reference it in your paper:
 }
 ```
 
+## GRASP Planner
+
+This fork adds the **GRASP** (Gradient RelAxed Stochastic Planner) to LeWM. GRASP jointly optimizes actions and virtual latent states, enabling effective planning at longer horizons where sampling-based methods like CEM degrade.
+
+**Planner code**: [`grasp_solver.py`](grasp_solver.py) (solver configs: `config/eval/solver/grasp.yaml`, `config/eval/solver/grasp_cem_sync.yaml`)
+
+**Example commands per environment:**
+
+Reacher:
+```bash
+python eval.py --config-name=reacher.yaml \
+  policy=dmc/reacher/lejepa \
+  solver=grasp \
+  eval.num_eval=50 \
+  eval.eval_budget=75 \
+  plan_config.horizon=15 \
+  plan_config.action_block=5 \
+  plan_config.receding_horizon=15
+```
+
+PushT with CEM sync instead of GD (H=15, GRASP 46% vs CEM 22%):
+```bash
+python eval.py --config-name=pusht.yaml \
+  policy=pusht/lejepa \
+  solver=grasp_cem_sync \
+  eval.num_eval=50 \
+  eval.dataset_name=pusht_expert_val \
+  eval.eval_budget=75 \
+  plan_config.horizon=15 \
+  plan_config.action_block=5 \
+  plan_config.receding_horizon=15
+```
+
+See the [GRASP pseudocode](https://github.com/michael-psenka/grasp/blob/main/grasp_pseudocode.py) for a minimal, self-contained reference implementation.
+
 ## Using the code
 This codebase builds on [stable-worldmodel](https://github.com/galilai-group/stable-worldmodel) for environment management, planning, and evaluation, and [stable-pretraining](https://github.com/galilai-group/stable-pretraining) for training. Together they reduce this repository to its core contribution: the model architecture and training objective.
 

@@ -1,0 +1,13 @@
+_target_: grasp_solver.GRASPSolver
+model: ???
+n_steps: 750
+batch_size: 1
+num_samples: 1
+lr_s: 0.1
+lr_a: 0.005
+state_noise_scale: 0.005
+gd_interval: 50
+gd_opt_steps: 10
+gd_lr: 0.05
+device: "cuda"
+seed: ${seed}

@@ -6,7 +6,7 @@ defaults:
 world:
   env_name: swm/TwoRoom-v1
   num_envs: ${eval.num_eval}
-  max_episode_steps: ??? # make sure it's >= eval_budget
+  max_episode_steps: 100 # will be overridden to 2*eval_budget in code
   history_size: 1
   frame_skip: 1
 
