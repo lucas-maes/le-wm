@@ -1,5 +1,5 @@
 dataset:
-  num_steps: ${eval:'${wm.num_preds} + ${wm.history_size}'}
+  num_steps: ${eval:'${num_preds} + ${model.history_size}'}
   frameskip: 5
   name: reacher.h5
   keys_to_load:

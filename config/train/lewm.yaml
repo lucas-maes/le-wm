@@ -31,11 +31,7 @@ optimizer:
   lr: 5e-5
   weight_decay: 1e-3
 
-wm:
-  type: lewm
-  history_size: 3
-  num_preds: 1
-  embed_dim: 192
+num_preds: 1
 
 loss:
   sigreg:

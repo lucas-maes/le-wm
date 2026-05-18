@@ -1,6 +1,6 @@
 dataset:
   name: ogbench/cube_single_expert.h5
-  num_steps: ${eval:'${wm.num_preds} + ${wm.history_size}'}
+  num_steps: ${eval:'${num_preds} + ${model.history_size}'}
   frameskip: 5
   keys_to_load:
     - pixels
