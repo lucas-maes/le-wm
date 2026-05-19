@@ -1,5 +1,5 @@
 dataset:
-  num_steps: ${eval:'${num_preds} + ${model.history_size}'}
+  num_steps: ${eval:'${num_preds} + ${history_size}'}
   frameskip: 5
   name: tworoom.h5
   keys_to_load:
