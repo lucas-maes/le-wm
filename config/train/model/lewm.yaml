@@ -1,8 +1,5 @@
 _target_: jepa.JEPA
 
-embed_dim: 192
-history_size: 3
-
 encoder:
   _target_: stable_pretraining.backbone.utils.vit_hf
   size: tiny
@@ -13,10 +10,10 @@ encoder:
 
 predictor:
   _target_: module.ARPredictor
-  num_frames: ${model.history_size}
-  input_dim: ${model.embed_dim}
-  hidden_dim: ${model.embed_dim}
-  output_dim: ${model.embed_dim}
+  num_frames: ${history_size}
+  input_dim: ${embed_dim}
+  hidden_dim: ${embed_dim}
+  output_dim: ${embed_dim}
   depth: 6
   heads: 16
   mlp_dim: 2048
@@ -27,12 +24,12 @@ predictor:
 action_encoder:
   _target_: module.Embedder
   input_dim: ???
-  emb_dim: ${model.embed_dim}
+  emb_dim: ${embed_dim}
 
 projector:
   _target_: module.MLP
-  input_dim: ${model.embed_dim}
-  output_dim: ${model.embed_dim}
+  input_dim: ${embed_dim}
+  output_dim: ${embed_dim}
   hidden_dim: 2048
   norm_fn:
     _target_: torch.nn.BatchNorm1d
@@ -40,8 +37,8 @@ projector:
 
 pred_proj:
   _target_: module.MLP
-  input_dim: ${model.embed_dim}
-  output_dim: ${model.embed_dim}
+  input_dim: ${embed_dim}
+  output_dim: ${embed_dim}
   hidden_dim: 2048
   norm_fn:
     _target_: torch.nn.BatchNorm1d

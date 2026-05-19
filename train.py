@@ -17,7 +17,7 @@ from utils import get_column_normalizer, get_img_preprocessor, SaveCkptCallback
 def lejepa_forward(self, batch, stage, cfg):
     """encode observations, predict next states, compute losses."""
 
-    ctx_len = cfg.model.history_size
+    ctx_len = cfg.history_size
     n_preds = cfg.num_preds
     lambd = cfg.loss.sigreg.weight
 
