@@ -131,9 +131,11 @@ class JEPA(nn.Module):
         assert "goal" in info_dict, "goal not in info_dict"
 
         device = next(self.parameters()).device
-        for k in list(info_dict.keys()):
-            if torch.is_tensor(info_dict[k]):
-                info_dict[k] = info_dict[k].to(device)
+        # Create a copy to avoid modifying the input dict in-place
+        info_dict = {
+            k: (v.to(device) if torch.is_tensor(v) else v)
+            for k, v in info_dict.items()
+        }
 
         goal = {k: v[:, 0] for k, v in info_dict.items() if torch.is_tensor(v)}
         goal["pixels"] = goal["goal"]
