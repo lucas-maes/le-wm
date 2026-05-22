@@ -30,11 +30,44 @@ If you find this code useful, please reference it in your paper:
 This codebase builds on [stable-worldmodel](https://github.com/galilai-group/stable-worldmodel) for environment management, planning, and evaluation, and [stable-pretraining](https://github.com/galilai-group/stable-pretraining) for training. Together they reduce this repository to its core contribution: the model architecture and training objective.
 
 **Installation:**
+
+### Linux/macOS
 ```bash
 uv venv --python=3.10
 source .venv/bin/activate
 uv pip install stable-worldmodel[train,env]
 ```
+
+### Windows
+Due to upstream dependency issues on Windows (gym==0.21 build failures and PyPI package availability), use this manual installation approach:
+
+```bash
+# Create and activate virtual environment
+uv venv --python=3.10
+.venv\Scripts\activate
+
+# Install PyTorch Lightning from GitHub (bypassing PyPI quarantine)
+uv pip install pytorch-lightning
+uv pip install git+https://github.com/Lightning-AI/lightning.git
+
+# Install base dependencies
+uv pip install torch torchvision numpy loguru tabulate gymnasium einops h5py hdf5plugin tqdm gdown typer rich
+
+# Install environment dependencies (skip gymnasium[all] to avoid box2d-py build issues)
+uv pip install pygame pymunk shapely ogbench minigrid opencv-python
+
+# Install training dependencies
+uv pip install transformers hydra-core hydra-submitit-launcher wandb
+
+# Install main packages without automatic dependency resolution
+uv pip install --no-deps stable-worldmodel
+uv pip install --no-deps stable-pretraining
+
+# Install missing transitive dependencies
+uv pip install timm pandas matplotlib prettytable datasets requests-cache scikit-learn
+```
+
+**Note:** This workaround skips `stable-baselines3` (requires gym==0.21 which fails to build on Windows) and `box2d-py` (requires SWIG/MSVC). The core training and evaluation pipelines remain fully functional.
 
 ## Data
 
