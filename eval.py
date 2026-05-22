@@ -90,6 +90,27 @@ def run(cfg: DictConfig):
         model = model.eval()
         model.requires_grad_(False)
         model.interpolate_pos_encoding = True
+
+        if cfg.get("compile", False):
+            print("[eval] compiling encoder + predictor (mode=reduce-overhead)")
+            model.encoder = torch.compile(
+                model.encoder, mode="reduce-overhead", dynamic=False)
+            model.predictor = torch.compile(
+                model.predictor, mode="reduce-overhead", dynamic=False)
+
+        if cfg.get("bf16", False):
+            print("[eval] wrapping encode/predict in bf16 autocast")
+            _orig_encode = model.encode
+            _orig_predict = model.predict
+            def _encode_bf16(info):
+                with torch.autocast("cuda", dtype=torch.bfloat16):
+                    return _orig_encode(info)
+            def _predict_bf16(emb, act_emb):
+                with torch.autocast("cuda", dtype=torch.bfloat16):
+                    return _orig_predict(emb, act_emb)
+            model.encode = _encode_bf16
+            model.predict = _predict_bf16
+
         config = swm.PlanConfig(**cfg.plan_config)
         solver = hydra.utils.instantiate(cfg.solver, model=model)
         policy = swm.policy.WorldModelPolicy(
