@@ -122,8 +122,9 @@ def run(cfg: DictConfig):
 
     g = np.random.default_rng(cfg.seed)
     random_episode_indices = g.choice(
-        len(valid_indices) - 1, size=cfg.eval.num_eval, replace=False
+        len(valid_indices), size=cfg.eval.num_eval, replace=False
     )
+    
 
     # sort increasingly to avoid issues with HDF5Dataset indexing
     random_episode_indices = np.sort(valid_indices[random_episode_indices])
