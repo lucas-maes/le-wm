@@ -28,8 +28,27 @@ class JEPA(nn.Module):
 
     def encode(self, info):
         """Encode observations and actions into embeddings.
-        info: dict with pixels and action keys
+
+        Two encoder contracts are supported:
+
+        * **Modular / injected encoder** (``encoder.encode_obs`` present): the
+          encoder maps a raw observation dict ``info["obs"]`` (each entry shaped
+          ``(B, T, ...)``) directly to a per-frame feature ``(B, T, D)``. This is
+          how LeWM shares an external, frozen encoder — e.g. a policy's fused
+          observation encoder — so the world model predicts in exactly that
+          encoder's feature space. ``projector`` is not applied here; the
+          injected feature is used as-is.
+        * **Native ViT encoder** (default): ``info["pixels"]`` shaped
+          ``(B, T, C, H, W)`` is flattened, run through the ViT, and the cls
+          token is projected by ``projector``.
         """
+
+        if hasattr(self.encoder, "encode_obs"):
+            emb = self.encoder.encode_obs(info["obs"])  # (B, T, D)
+            info["emb"] = emb
+            if "action" in info:
+                info["act_emb"] = self.action_encoder(info["action"])
+            return info
 
         pixels = info['pixels'].float()
         b = pixels.size(0)
@@ -149,5 +168,5 @@ class JEPA(nn.Module):
         info_dict = self.rollout(info_dict, action_candidates)
 
         cost = self.criterion(info_dict)
-        
+
         return cost
