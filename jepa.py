@@ -17,6 +17,9 @@ class JEPA(nn.Module):
         action_encoder,
         projector=None,
         pred_proj=None,
+        proprio_encoder=None,
+        num_views=1,
+        enc_dim=None,
     ):
         super().__init__()
 
@@ -26,6 +29,25 @@ class JEPA(nn.Module):
         self.projector = projector or nn.Identity()
         self.pred_proj = pred_proj or nn.Identity()
 
+        # Optional proprioception conditioning. When set, the low-dim proprio is
+        # embedded and folded into the state embedding so LeWM's own latent
+        # ``Z_lewm`` carries the low-dim state (needed for the downstream policy
+        # feature). There is no proprio *readout* head: closed-loop control uses
+        # a separate feature-readout bridge, not a proprio decode.
+        self.proprio_encoder = proprio_encoder
+
+        # Optional multi-view support. With ``num_views > 1`` each camera's cls
+        # token gets a learned view embedding; the per-view tokens are then
+        # concatenated and projected back to ``embed_dim`` by ``projector``
+        # (whose ``input_dim`` must therefore be ``num_views * enc_dim``).
+        self.num_views = num_views
+        if num_views > 1:
+            assert enc_dim is not None, "enc_dim is required when num_views > 1"
+            self.view_embedding = nn.Parameter(torch.zeros(num_views, enc_dim))
+            nn.init.normal_(self.view_embedding, std=0.02)
+        else:
+            self.view_embedding = None
+
     def encode(self, info):
         """Encode observations and actions into embeddings.
 
@@ -33,14 +55,12 @@ class JEPA(nn.Module):
 
         * **Modular / injected encoder** (``encoder.encode_obs`` present): the
           encoder maps a raw observation dict ``info["obs"]`` (each entry shaped
-          ``(B, T, ...)``) directly to a per-frame feature ``(B, T, D)``. This is
-          how LeWM shares an external, frozen encoder — e.g. a policy's fused
-          observation encoder — so the world model predicts in exactly that
-          encoder's feature space. ``projector`` is not applied here; the
-          injected feature is used as-is.
-        * **Native ViT encoder** (default): ``info["pixels"]`` shaped
-          ``(B, T, C, H, W)`` is flattened, run through the ViT, and the cls
-          token is projected by ``projector``.
+          ``(B, T, ...)``) directly to a per-frame feature ``(B, T, D)``. Kept as
+          a generic path; not used by the representation-learning LeWM recipe.
+        * **Native ViT encoder** (default): ``info["pixels"]`` may be single-view
+          ``(B, T, C, H, W)`` or multi-view ``(B, T, V, C, H, W)``; the cls token
+          per view is projected by ``projector`` and (optionally) has proprio
+          folded in from ``info["proprio"]``.
         """
 
         if hasattr(self.encoder, "encode_obs"):
@@ -52,11 +72,32 @@ class JEPA(nn.Module):
 
         pixels = info['pixels'].float()
         b = pixels.size(0)
-        pixels = rearrange(pixels, "b t ... -> (b t) ...") # flatten for encoding
-        output = self.encoder(pixels, interpolate_pos_encoding=True)
-        pixels_emb = output.last_hidden_state[:, 0]  # cls token
-        emb = self.projector(pixels_emb)
-        info["emb"] = rearrange(emb, "(b t) d -> b t d", b=b)
+
+        if pixels.dim() == 6:  # multi-view: (B, T, V, C, H, W)
+            v = pixels.size(2)
+            flat = rearrange(pixels, "b t v c h w -> (b t v) c h w")
+            output = self.encoder(flat, interpolate_pos_encoding=True)
+            cls = output.last_hidden_state[:, 0]  # (B*T*V, enc_dim)
+            cls = rearrange(cls, "(b t v) d -> b t v d", b=b, v=v)
+            if self.view_embedding is not None:
+                cls = cls + self.view_embedding.view(1, 1, v, -1)
+            cls = rearrange(cls, "b t v d -> (b t) (v d)")  # concat views
+        else:  # single-view: (B, T, C, H, W)
+            flat = rearrange(pixels, "b t ... -> (b t) ...")
+            output = self.encoder(flat, interpolate_pos_encoding=True)
+            cls = output.last_hidden_state[:, 0]  # cls token
+
+        emb = self.projector(cls)
+        visual_emb = rearrange(emb, "(b t) d -> b t d", b=b)
+        info["visual_emb"] = visual_emb
+
+        # fold proprio into the state embedding
+        if "proprio" in info and self.proprio_encoder is not None:
+            prop_emb = self.proprio_encoder(info["proprio"])
+            info["prop_emb"] = prop_emb
+            info["emb"] = visual_emb + prop_emb
+        else:
+            info["emb"] = visual_emb
 
         if "action" in info:
             info["act_emb"] = self.action_encoder(info["action"])
