@@ -1,0 +1,10 @@
+.lab/
+run.log
+.venv/
+__pycache__/
+*.pyc
+outputs/
+wandb/
+*.ckpt
+*.h5
+*.zst
