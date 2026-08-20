@@ -98,7 +98,7 @@ def run(cfg: DictConfig):
         model.requires_grad_(False)
         model.interpolate_pos_encoding = True
         config = swm.PlanConfig(**cfg.plan_config)
-        solver = hydra.utils.instantiate(cfg.solver, model=model)
+        solver = hydra.utils.instantiate(cfg.solver, model=model, device=device)
         policy = swm.policy.WorldModelPolicy(
             solver=solver, config=config, process=process, transform=transform
         )
