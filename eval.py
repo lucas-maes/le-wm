@@ -86,7 +86,10 @@ def run(cfg: DictConfig):
 
     if policy != "random":
         model = swm.wm.utils.load_pretrained(cfg.policy)
-        model = model.to("cuda")
+        device = "cuda" if torch.cuda.is_available() else (
+            "mps" if torch.backends.mps.is_available() else "cpu"
+        )
+        model = model.to(device)
         model = model.eval()
         model.requires_grad_(False)
         model.interpolate_pos_encoding = True
