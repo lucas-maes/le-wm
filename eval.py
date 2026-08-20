@@ -14,6 +14,10 @@ from sklearn import preprocessing
 from torchvision.transforms import v2 as transforms
 import stable_worldmodel as swm
 
+from utils import patch_hydra_py314_argparse
+
+patch_hydra_py314_argparse()
+
 def img_transform(cfg):
     transform = transforms.Compose(
         [
