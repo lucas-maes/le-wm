@@ -1,0 +1,7 @@
+.venv/
+outputs/
+wandb/
+*.ckpt
+*.h5
+*.zst
+*.lance

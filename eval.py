@@ -14,6 +14,10 @@ from sklearn import preprocessing
 from torchvision.transforms import v2 as transforms
 import stable_worldmodel as swm
 
+from utils import patch_hydra_py314_argparse
+
+patch_hydra_py314_argparse()
+
 def img_transform(cfg):
     transform = transforms.Compose(
         [
@@ -86,12 +90,15 @@ def run(cfg: DictConfig):
 
     if policy != "random":
         model = swm.wm.utils.load_pretrained(cfg.policy)
-        model = model.to("cuda")
+        device = "cuda" if torch.cuda.is_available() else (
+            "mps" if torch.backends.mps.is_available() else "cpu"
+        )
+        model = model.to(device)
         model = model.eval()
         model.requires_grad_(False)
         model.interpolate_pos_encoding = True
         config = swm.PlanConfig(**cfg.plan_config)
-        solver = hydra.utils.instantiate(cfg.solver, model=model)
+        solver = hydra.utils.instantiate(cfg.solver, model=model, device=device)
         policy = swm.policy.WorldModelPolicy(
             solver=solver, config=config, process=process, transform=transform
         )

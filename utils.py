@@ -1,7 +1,24 @@
+import argparse
+
 import numpy as np
 import torch
 from stable_pretraining import data as dt
 from lightning.pytorch.callbacks import Callback
+
+
+def patch_hydra_py314_argparse():
+    """Python 3.14's argparse.HelpFormatter._expand_help does `'%' not in
+    help_string`, which raises TypeError for hydra's non-str LazyCompletionHelp
+    (used for the --shell-completion flag), crashing hydra.main() before any
+    user code runs. Coerce non-str help text to str first."""
+    orig = argparse.HelpFormatter._expand_help
+
+    def _expand_help(self, action):
+        if not isinstance(action.help, str):
+            action.help = str(action.help)
+        return orig(self, action)
+
+    argparse.HelpFormatter._expand_help = _expand_help
 
 def get_img_preprocessor(source: str, target: str, img_size: int = 224):
     imagenet_stats = dt.dataset_stats.ImageNet
