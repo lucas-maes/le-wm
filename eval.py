@@ -14,6 +14,14 @@ from sklearn import preprocessing
 from torchvision.transforms import v2 as transforms
 import stable_worldmodel as swm
 
+def get_accelerator():
+    if torch.cuda.is_available():
+        return "cuda"
+    if hasattr(torch, "xpu") and torch.xpu.is_available():
+        return "xpu"
+    raise RuntimeError("Neither CUDA nor XPU is available.")
+
+
 def img_transform(cfg):
     transform = transforms.Compose(
         [
@@ -85,13 +93,14 @@ def run(cfg: DictConfig):
     policy = cfg.get("policy", "random")
 
     if policy != "random":
+        device = get_accelerator()
         model = swm.wm.utils.load_pretrained(cfg.policy)
-        model = model.to("cuda")
+        model = model.to(device)
         model = model.eval()
         model.requires_grad_(False)
         model.interpolate_pos_encoding = True
         config = swm.PlanConfig(**cfg.plan_config)
-        solver = hydra.utils.instantiate(cfg.solver, model=model)
+        solver = hydra.utils.instantiate(cfg.solver, model=model, device=device)
         policy = swm.policy.WorldModelPolicy(
             solver=solver, config=config, process=process, transform=transform
         )

@@ -36,6 +36,30 @@ source .venv/bin/activate
 uv pip install stable-worldmodel[train,env]
 ```
 
+**Intel XPU Support:**
+
+Planning evaluation (`eval.py`) runs on Intel GPUs through PyTorch XPU. CUDA is
+preferred when it is available; CUDA-free hosts with an Intel GPU select XPU
+automatically. Training is not covered.
+
+Install the XPU build of PyTorch before the other dependencies, in a separate
+environment from any CUDA install:
+
+```bash
+uv venv --python=3.10
+source .venv/bin/activate
+uv pip install torch torchvision --index-url https://download.pytorch.org/whl/xpu
+uv pip install stable-worldmodel[train,env]
+```
+
+Verify backend selection:
+
+```bash
+python -c "import torch; print(torch.__version__); print('xpu:', torch.xpu.is_available()); print('cuda:', torch.cuda.is_available())"
+```
+
+Expected output includes an `+xpu` PyTorch version, `xpu: True`, and `cuda: False`.
+
 ## Data
 
 Datasets use the HDF5 format for fast loading. Download the data from [HuggingFace](https://huggingface.co/collections/quentinll/lewm) and decompress with:
