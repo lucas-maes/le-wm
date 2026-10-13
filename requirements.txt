@@ -1,0 +1,18 @@
+# Setup with uv: 
+# uv venv --python=3.10 .venv 
+# source .venv/bin/activate && uv pip install -r requirements.txt
+
+stable-worldmodel[train,env]==0.1.1  # Working stable-worldmodel release; provides World, CEM and HDF5Dataset.
+stable-pretraining==0.1.7          # Version installed alongside the working LeWM setup.
+transformers==4.57.6              # REQUIRED: newer ViT module key names caused pretrained checkpoint load_state_dict mismatch.
+datasets==3.6.0                   # Compatible version used with the installed Hugging Face stack.
+huggingface-hub==0.36.0           # Keep compatible with Transformers 4.57.6 and datasets 3.6.0.
+fsspec==2025.3.0                 # Pinned to the compatible version used in this environment.
+h5py==3.16.0
+hdf5plugin==7.1.0                 # REQUIRED: HDF5 compression filter needed to open h5 file.
+pygame==2.6.1                     # REQUIRED: environment/rendering dependency; reinstall fixed a binary-extension mismatch.
+
+# NOTE: the `hf` CLI must be installed separately with:
+#   uv tool install 'huggingface_hub==2.2.0'
+# It is intentionally NOT listed here: it runs in an isolated uv tool environment because installing it in the LeWM venv could conflict with the pins above.
+
