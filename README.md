@@ -44,12 +44,17 @@ Datasets use the HDF5 format for fast loading. Download the data from [HuggingFa
 tar --zstd -xvf archive.tar.zst
 ```
 
-Place the extracted `.h5` files under `$STABLEWM_HOME` (defaults to `~/.stable-wm/`). You can override this path:
+Place the extracted `.h5` files under `$STABLEWM_HOME/datasets/` (defaults to `~/.stable_worldmodel/datasets/`). You can override the root path:
 ```bash
 export STABLEWM_HOME=/path/to/your/storage
 ```
 
-Dataset names are specified without the `.h5` extension. For example, `config/train/data/pusht.yaml` references `pusht_expert_train`, which resolves to `$STABLEWM_HOME/pusht_expert_train.h5`.
+Dataset names in the data configs are resolved relative to `$STABLEWM_HOME/datasets/`. For example, `config/train/data/tworoom.yaml` references `tworoom.h5`, which resolves to `$STABLEWM_HOME/datasets/tworoom.h5`.
+
+Reading `.h5` datasets requires the `hdf5plugin` package, which is not installed by `stable-worldmodel[train,env]`; without it the HDF5 format is silently not registered and training fails with `No format detected for ... .h5`. Install it with:
+```bash
+pip install hdf5plugin
+```
 
 ## Training
 
@@ -68,20 +73,20 @@ To launch training:
 python train.py data=pusht
 ```
 
-Checkpoints are saved to `$STABLEWM_HOME` upon completion.
+Checkpoints are saved under `$STABLEWM_HOME/checkpoints/` upon completion.
 
 For baseline scripts, see the stable-worldmodel [scripts](https://github.com/galilai-group/stable-worldmodel/tree/main/scripts/train) folder.
 
 ## Planning
 
-Evaluation configs live under `config/eval/`. Set the `policy` field to the checkpoint path **relative to `$STABLEWM_HOME`**, without the `_object.ckpt` suffix:
+Evaluation configs live under `config/eval/`. `eval.py` loads the policy with `stable_worldmodel.wm.utils.load_pretrained`, which accepts a Hugging Face repo id, or a local folder or `.pt` file **relative to `$STABLEWM_HOME/checkpoints/`** containing `weights.pt`-style weights and a `config.json`:
 
 ```bash
-# ✓ correct
-python eval.py --config-name=pusht.yaml policy=pusht/lewm
+# released weights, straight from the Hub (no conversion needed)
+python eval.py --config-name=tworoom.yaml policy=quentinll/lewm-tworooms
 
-# ✗ incorrect
-python eval.py --config-name=pusht.yaml policy=pusht/lewm_object.ckpt
+# a local run saved by train.py under $STABLEWM_HOME/checkpoints/<run>/
+python eval.py --config-name=pusht.yaml policy=pusht/lewm
 ```
 
 ## Pretrained Checkpoints
@@ -136,49 +141,15 @@ The returned module is in `eval` mode with its PyTorch weights accessible via `.
 
 ### From the Hugging Face mirror
 
-The HF model repos ship the LeWM checkpoint as a `weights.pt` (state dict) plus a
-`config.json` describing the model. Convert once to produce the `_object.ckpt`
-that `eval.py` expects:
+The HF model repos ship a `weights.pt` (state dict) and a `config.json` that is a Hydra config targeting `stable_worldmodel.wm.lewm.LeWM`. Nothing needs converting: `eval.py` (through `load_pretrained`) takes the repo id directly, and in Python
 
-```bash
-# download weights.pt + config.json
-hf download quentinll/lewm-pusht --local-dir $STABLEWM_HOME/hf_pusht
-
-# convert to object checkpoint under $STABLEWM_HOME/pusht/lewm_object.ckpt
-python - <<'PY'
-import json, torch, stable_pretraining as spt
-from pathlib import Path
-from jepa import JEPA
-from module import ARPredictor, Embedder, MLP
+```python
 import stable_worldmodel as swm
 
-src = Path(swm.data.utils.get_cache_dir(), "hf_pusht")
-out = Path(swm.data.utils.get_cache_dir(), "pusht", "lewm_object.ckpt")
-
-cfg = json.loads((src / "config.json").read_text())
-encoder = spt.backbone.utils.vit_hf(
-    cfg["encoder"]["size"],
-    patch_size=cfg["encoder"]["patch_size"],
-    image_size=cfg["encoder"]["image_size"],
-    pretrained=False, use_mask_token=False,
-)
-mlp = lambda k: MLP(input_dim=cfg[k]["input_dim"], output_dim=cfg[k]["output_dim"],
-                    hidden_dim=cfg[k]["hidden_dim"], norm_fn=torch.nn.BatchNorm1d)
-model = JEPA(
-    encoder=encoder,
-    predictor=ARPredictor(**cfg["predictor"]),
-    action_encoder=Embedder(**cfg["action_encoder"]),
-    projector=mlp("projector"),
-    pred_proj=mlp("pred_proj"),
-)
-sd = torch.load(src / "weights.pt", map_location="cpu", weights_only=False)
-model.load_state_dict(sd, strict=True)
-out.parent.mkdir(parents=True, exist_ok=True)
-torch.save(model, out)
-PY
+model = swm.wm.utils.load_pretrained("quentinll/lewm-pusht")   # cached under $STABLEWM_HOME/checkpoints/
 ```
 
-After conversion, load via `swm.policy.AutoCostModel('pusht/lewm')` as usual.
+returns the model in eval mode with the weights loaded (`strict=True`).
 
 ## Contact & Contributions
 Feel free to open [issues](https://github.com/lucas-maes/le-wm/issues)! For questions or collaborations, please contact `lucas.maes@mila.quebec`
